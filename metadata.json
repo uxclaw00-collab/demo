@@ -1,0 +1,6 @@
+{
+  "name": "Smart Fridge",
+  "description": "Sleek AI-powered culinary assistant that identifies fridge ingredients from photos, generates personalized recipes with dietary filters, provides step-by-step cooking mode with voice read-aloud, and manages shopping lists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
