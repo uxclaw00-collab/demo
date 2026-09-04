@@ -21,9 +21,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -32,7 +37,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,6 +57,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.model.CuisineFilter
+import com.example.model.DietaryFilter
+import com.example.model.MealType
+import com.example.model.PrepTimeFilter
 import com.example.model.Recipe
 import com.example.ui.AppScreen
 import com.example.ui.CulinaryViewModel
@@ -80,13 +89,19 @@ fun FridgeRecipesScreen(
     val customBitmap by viewModel.currentPhotoBitmap.collectAsState()
     val detectedIngredients by viewModel.detectedIngredients.collectAsState()
     val suggestedRecipes by viewModel.suggestedRecipes.collectAsState()
+    val displayedSuggestedRecipes by viewModel.displayedSuggestedRecipes.collectAsState()
     val dietaryFilters by viewModel.dietaryFilters.collectAsState()
+    val selectedMealType by viewModel.selectedMealType.collectAsState()
+    val selectedPrepTime by viewModel.selectedPrepTime.collectAsState()
+    val selectedCuisine by viewModel.selectedCuisine.collectAsState()
+    val activeFilterCount by viewModel.activeFilterCount.collectAsState()
     val shoppingItems by viewModel.shoppingItems.collectAsState()
     val pantryItems by viewModel.pantryItems.collectAsState()
+    val savedRecipes by viewModel.savedRecipes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val loadingStatus by viewModel.loadingStatus.collectAsState()
 
-    val topRecipe = suggestedRecipes.firstOrNull()
+    val topRecipe = displayedSuggestedRecipes.firstOrNull() ?: suggestedRecipes.firstOrNull()
 
     LazyColumn(
         modifier = modifier
@@ -109,7 +124,7 @@ fun FridgeRecipesScreen(
             item {
                 BentoGridHub(
                     topRecipe = topRecipe,
-                    activeFilterCount = dietaryFilters.size,
+                    activeFilterCount = activeFilterCount,
                     shoppingCount = shoppingItems.count { !it.isBought },
                     pantryCount = pantryItems.size,
                     onStartCookingTopRecipe = { viewModel.startCooking(topRecipe) },
@@ -129,7 +144,7 @@ fun FridgeRecipesScreen(
                 onAddIngredient = { name, category -> viewModel.addCustomIngredient(name, category) },
                 onRemoveIngredient = { viewModel.removeIngredient(it) },
                 onOpenFilterSheet = { viewModel.setFilterSheetOpen(true) },
-                activeFilterCount = dietaryFilters.size
+                activeFilterCount = activeFilterCount
             )
         }
 
@@ -170,7 +185,7 @@ fun FridgeRecipesScreen(
             }
         }
 
-        // 5. Section Header for Suggested Recipes
+        // 5. Section Header for Suggested Recipes & Quick Favorites Access
         item {
             Row(
                 modifier = Modifier
@@ -190,60 +205,354 @@ fun FridgeRecipesScreen(
                         color = BentoTextMuted
                     )
                     Text(
-                        text = "Chef Recommendations",
+                        text = "Personalized Recommendations",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = BentoTextPrimary
                     )
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = BentoTileSage
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "${suggestedRecipes.size} recipes",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = BentoGreenPrimary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    // Filter Sheet Trigger Button
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (activeFilterCount > 0) BentoGreenPrimary else BentoTileSage,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { viewModel.setFilterSheetOpen(true) }
+                            .testTag("recipe_discovery_filter_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Filter Recipes",
+                                tint = if (activeFilterCount > 0) Color.White else BentoGreenPrimary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = if (activeFilterCount > 0) "Filters ($activeFilterCount)" else "Filter",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = if (activeFilterCount > 0) Color.White else BentoGreenPrimary
+                            )
+                        }
+                    }
+
+                    // Favorites Pill
+                    if (savedRecipes.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = BentoTileApricot,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmSpice.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { viewModel.navigateTo(AppScreen.SAVED_RECIPES) }
+                                .testTag("saved_recipes_counter_badge")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = "Saved Favorites",
+                                    tint = WarmSpice,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = "${savedRecipes.size} Saved",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = WarmSpice
+                                )
+                            }
+                        }
+                    }
+
+                    // Recipe Count Badge
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = BentoTileSage
+                    ) {
+                        Text(
+                            text = "${displayedSuggestedRecipes.size} recipes",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = BentoGreenPrimary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // 6. Recipe Cards List (with Pantry Cross-Referencing, Substitutions, and Favorites)
-        if (suggestedRecipes.isEmpty() && !isLoading) {
-            item {
-                Column(
+        // 6. Interactive Meal Type Selector Bar (Breakfast / Lunch / Dinner / Snack)
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MealType.values().forEach { meal ->
+                    val isSelected = selectedMealType == meal
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) BentoGreenPrimary else BentoSurfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) BentoGreenPrimary else BentoBorder
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { viewModel.setSelectedMealType(meal) }
+                            .testTag("discovery_meal_${meal.name.lowercase()}")
+                    ) {
+                        Text(
+                            text = meal.displayName,
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) Color.White else BentoTextPrimary,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 7. Interactive Prep Time & Cuisine Filter Bar
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Prep Time Quick Filters
+                PrepTimeFilter.values().forEach { prep ->
+                    val isSelected = selectedPrepTime == prep
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) BentoTileSage else BentoCardBg,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) BentoGreenPrimary else BentoBorder
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { viewModel.setSelectedPrepTime(prep) }
+                            .testTag("discovery_prep_${prep.name.lowercase()}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = if (isSelected) BentoGreenPrimary else BentoTextMuted,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = prep.displayName,
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.5.sp),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) BentoGreenPrimary else BentoTextPrimary
+                            )
+                        }
+                    }
+                }
+
+                // Cuisine Style Quick Filters
+                CuisineFilter.values().filter { it != CuisineFilter.ALL }.forEach { cuisine ->
+                    val isSelected = selectedCuisine == cuisine
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) BentoTileSage else BentoCardBg,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) BentoGreenPrimary else BentoBorder
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                if (isSelected) {
+                                    viewModel.setSelectedCuisine(CuisineFilter.ALL)
+                                } else {
+                                    viewModel.setSelectedCuisine(cuisine)
+                                }
+                            }
+                            .testTag("discovery_cuisine_${cuisine.name.lowercase()}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(text = cuisine.flagEmoji, fontSize = 12.sp)
+                            Text(
+                                text = cuisine.displayName,
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.5.sp),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) BentoGreenPrimary else BentoTextPrimary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 8. Interactive Dietary Preferences Filter Bar
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // "All / Reset" chip
+                val isAllSelected = dietaryFilters.isEmpty()
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isAllSelected) BentoGreenPrimary else BentoSurfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isAllSelected) BentoGreenPrimary else BentoBorder
+                    ),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { viewModel.clearDietaryFilters() }
+                        .testTag("dietary_filter_all")
                 ) {
                     Text(
-                        text = "No matching recipes found",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "🍽️ All Diets",
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.5.sp),
+                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isAllSelected) Color.White else BentoTextPrimary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Try adjusting your dietary filters or checking more ingredients in the shelf above.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.clearDietaryFilters(); viewModel.regenerateRecipesWithActiveFilters() },
-                        shape = RoundedCornerShape(16.dp)
+                }
+
+                // Individual Dietary Preference Chips
+                DietaryFilter.values().forEach { filter ->
+                    val isSelected = dietaryFilters.contains(filter)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) BentoTileSage else BentoCardBg,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) BentoGreenPrimary else BentoBorder
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { viewModel.toggleDietaryFilter(filter) }
+                            .testTag("dietary_chip_${filter.id}")
                     ) {
-                        Text("Reset Filters & Regenerate")
+                        Row(
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(text = filter.iconEmoji, fontSize = 13.sp)
+                            Text(
+                                text = filter.label,
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.5.sp),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) BentoGreenPrimary else BentoTextPrimary
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = BentoGreenPrimary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 9. Recipe Cards List (with Pantry Cross-Referencing, Substitutions, and Favorites)
+        if (displayedSuggestedRecipes.isEmpty() && !isLoading) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = BentoSurfaceVariant
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BentoBorder)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = BentoTileSage,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.RestaurantMenu,
+                                    contentDescription = null,
+                                    tint = BentoGreenPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No matching recipes found",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = BentoTextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Try adjusting your meal type, prep time, or cuisine filters to see more recommendations.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = BentoTextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.resetAllDiscoveryFilters() },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = BentoGreenPrimary,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier.testTag("reset_all_discovery_filters_button")
+                        ) {
+                            Text("Reset All Filters")
+                        }
                     }
                 }
             }
         } else {
-            items(suggestedRecipes, key = { it.id }) { recipe ->
+            items(displayedSuggestedRecipes, key = { it.id }) { recipe ->
                 RecipeCard(
                     recipe = recipe,
                     pantryItems = pantryItems,
@@ -257,6 +566,7 @@ fun FridgeRecipesScreen(
             }
         }
 
+        // Bottom spacing padding
         item {
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -381,7 +691,7 @@ private fun BentoGridHub(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.TrendingUp,
+                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                             contentDescription = null,
                             tint = BentoTextSecondary,
                             modifier = Modifier.size(15.dp)

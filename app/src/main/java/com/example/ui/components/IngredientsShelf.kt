@@ -78,10 +78,28 @@ fun IngredientsShelf(
     modifier: Modifier = Modifier
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var isQuickBulkExpanded by remember { mutableStateOf(false) }
+    var quickBulkInput by remember { mutableStateOf("") }
     var newItemName by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Produce") }
 
     val categories = listOf("Produce", "Dairy & Eggs", "Meat & Seafood", "Pantry", "Condiments")
+
+    val parsedQuickItems = remember(quickBulkInput) {
+        if (quickBulkInput.isBlank()) emptyList()
+        else quickBulkInput.split(",", "\n", ";")
+            .map { it.trim().trim('•', '-', '*', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.').trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
+
+    val parsedDialogItems = remember(newItemName) {
+        if (newItemName.isBlank()) emptyList()
+        else newItemName.split(",", "\n", ";")
+            .map { it.trim().trim('•', '-', '*', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.').trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
 
     Surface(
         modifier = modifier
@@ -95,7 +113,7 @@ fun IngredientsShelf(
         Column(
             modifier = Modifier.padding(18.dp)
         ) {
-            // Shelf Header with Filter Button
+            // Shelf Header with Filter Button & Quick Add Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -136,33 +154,208 @@ fun IngredientsShelf(
                     }
                 }
 
-                // Add custom ingredient button
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = BentoSurfaceVariant,
-                    border = BorderStroke(1.dp, BentoBorder),
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Quick Bulk Add Toggle Button
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isQuickBulkExpanded) BentoTileSage else BentoSurfaceVariant,
+                        border = BorderStroke(1.dp, if (isQuickBulkExpanded) BentoGreenPrimary else BentoBorder),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { isQuickBulkExpanded = !isQuickBulkExpanded }
+                            .testTag("toggle_quick_bulk_input_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Quick Comma Add",
+                                tint = BentoGreenPrimary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Quick List",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = BentoTextPrimary
+                            )
+                        }
+                    }
+
+                    // Add custom ingredient dialog button
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = BentoGreenPrimary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { showAddDialog = true }
+                            .testTag("add_custom_ingredient_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Item Dialog",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "+ Add",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Quick Comma-Separated Input Field Section
+            AnimatedVisibility(visible = isQuickBulkExpanded) {
+                Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { showAddDialog = true }
-                        .testTag("add_custom_ingredient_button")
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .background(BentoSurfaceVariant, RoundedCornerShape(18.dp))
+                        .border(1.dp, BentoBorder, RoundedCornerShape(18.dp))
+                        .padding(12.dp)
+                        .testTag("quick_bulk_add_container")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Ingredient",
-                            tint = BentoGreenPrimary,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "+ Add Item",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "QUICK BULK INVENTORY INPUT",
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontSize = 9.sp),
                             fontWeight = FontWeight.Bold,
-                            color = BentoTextPrimary
+                            color = BentoGreenPrimary
                         )
+                        Text(
+                            text = "Comma-separated",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = BentoTextMuted
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    OutlinedTextField(
+                        value = quickBulkInput,
+                        onValueChange = { quickBulkInput = it },
+                        placeholder = { Text("e.g. Eggs, Spinach, Cheddar, Milk, Tomatoes") },
+                        singleLine = false,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("comma_separated_ingredients_input")
+                    )
+
+                    // Live preview badges for detected items in the text
+                    if (parsedQuickItems.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Parsed (${parsedQuickItems.size}):",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = BentoTextSecondary
+                            )
+                            parsedQuickItems.forEach { item ->
+                                Surface(
+                                    shape = RoundedCornerShape(100.dp),
+                                    color = BentoTileSage,
+                                    border = BorderStroke(1.dp, BentoGreenPrimary.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = item,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = BentoGreenPrimary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Preset quick suggestion chips
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf(
+                                "Eggs, Cheese, Milk",
+                                "Spinach, Tomato, Onion",
+                                "Chicken, Rice, Garlic"
+                            ).forEach { sample ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, BentoBorder),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            quickBulkInput = if (quickBulkInput.isBlank()) sample else "$quickBulkInput, $sample"
+                                        }
+                                ) {
+                                    Text(
+                                        text = "+ $sample",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                        color = BentoTextSecondary,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Button(
+                            onClick = {
+                                if (parsedQuickItems.isNotEmpty()) {
+                                    onAddIngredient(quickBulkInput, selectedCategory)
+                                    quickBulkInput = ""
+                                    isQuickBulkExpanded = false
+                                }
+                            },
+                            enabled = parsedQuickItems.isNotEmpty(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = BentoGreenPrimary,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier.testTag("submit_bulk_ingredients_button")
+                        ) {
+                            Text(
+                                text = if (parsedQuickItems.size > 1) "Add All (${parsedQuickItems.size})" else "Add to Fridge",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -187,13 +380,13 @@ fun IngredientsShelf(
         }
     }
 
-    // Add Ingredient Dialog
+    // Add Ingredient Dialog (supports single item or comma-separated lists)
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
             title = {
                 Text(
-                    text = "Add Fridge Item",
+                    text = "Add Fridge Ingredients",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = BentoTextPrimary
@@ -202,7 +395,7 @@ fun IngredientsShelf(
             text = {
                 Column {
                     Text(
-                        text = "Enter an ingredient currently in your fridge:",
+                        text = "Enter one or multiple ingredients separated by commas:",
                         style = MaterialTheme.typography.bodySmall,
                         color = BentoTextSecondary
                     )
@@ -210,15 +403,52 @@ fun IngredientsShelf(
                     OutlinedTextField(
                         value = newItemName,
                         onValueChange = { newItemName = it },
-                        label = { Text("Ingredient name (e.g. Greek Yogurt)") },
-                        singleLine = true,
+                        label = { Text("e.g. Greek Yogurt, Spinach, Cheddar, Eggs") },
+                        singleLine = false,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("custom_ingredient_input")
                     )
+
+                    // Live chip preview in dialog
+                    if (parsedDialogItems.size > 1) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Detected ${parsedDialogItems.size} items:",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = BentoGreenPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            parsedDialogItems.forEach { item ->
+                                Surface(
+                                    shape = RoundedCornerShape(100.dp),
+                                    color = BentoTileSage,
+                                    border = BorderStroke(1.dp, BentoGreenPrimary.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = item,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = BentoGreenPrimary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "CATEGORY:",
+                        text = "DEFAULT CATEGORY:",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontSize = 9.sp),
                         fontWeight = FontWeight.Bold,
                         color = BentoTextMuted
@@ -264,9 +494,13 @@ fun IngredientsShelf(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = BentoGreenPrimary,
                         contentColor = Color.White
-                    )
+                    ),
+                    modifier = Modifier.testTag("dialog_submit_ingredient_button")
                 ) {
-                    Text("Add to Fridge", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (parsedDialogItems.size > 1) "Add All (${parsedDialogItems.size})" else "Add to Fridge",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {

@@ -93,6 +93,7 @@ fun FridgeScannerBar(
     ) { uri: Uri? ->
         if (uri != null) {
             try {
+                @Suppress("DEPRECATION")
                 val bitmap = if (Build.VERSION.SDK_INT < 28) {
                     MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
                 } else {

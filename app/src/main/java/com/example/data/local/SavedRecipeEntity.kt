@@ -27,6 +27,7 @@ data class SavedRecipeEntity(
     val matchedIngredientsJson: String,
     val missingIngredientsJson: String,
     val stepsJson: String,
+    val mealType: String = "Dinner",
     val savedAt: Long = System.currentTimeMillis()
 ) {
     fun toDomain(): Recipe {
@@ -102,7 +103,8 @@ data class SavedRecipeEntity(
             matchedIngredients = matched,
             missingIngredients = missing,
             steps = steps,
-            isSaved = true
+            isSaved = true,
+            mealType = mealType
         )
     }
 
@@ -148,7 +150,8 @@ data class SavedRecipeEntity(
                 dietaryTagsJson = tagsArray.toString(),
                 matchedIngredientsJson = matchedArray.toString(),
                 missingIngredientsJson = missingArray.toString(),
-                stepsJson = stepsArray.toString()
+                stepsJson = stepsArray.toString(),
+                mealType = recipe.mealType
             )
         }
     }

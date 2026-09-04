@@ -21,7 +21,8 @@ class ExampleRobolectricTest {
 
   @Test
   fun `test meal planning days of week generation`() {
-    val days = com.example.model.DayInfo.getWeekDays(0)
+    val monday = com.example.model.PlannedMeal.getMondayOfWeek()
+    val days = com.example.model.PlannedMeal.getWeekDays(monday)
     assertEquals(7, days.size)
     assertEquals("Monday", days[0].dayName)
     assertEquals("Sunday", days[6].dayName)

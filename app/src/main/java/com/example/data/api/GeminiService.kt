@@ -272,6 +272,19 @@ class GeminiService {
                         }
                     }
 
+                    val mealTypeStr = rObj.optString("mealType", "").trim()
+                    val inferredMealType = if (mealTypeStr.isNotBlank()) {
+                        mealTypeStr
+                    } else {
+                        val titleLower = rObj.optString("title", "").lowercase()
+                        when {
+                            titleLower.contains("frittata") || titleLower.contains("scramble") || titleLower.contains("omelette") || titleLower.contains("egg") || titleLower.contains("pancake") || titleLower.contains("waffle") || titleLower.contains("oat") -> "Breakfast"
+                            titleLower.contains("salad") || titleLower.contains("wrap") || titleLower.contains("sandwich") || titleLower.contains("soup") || titleLower.contains("bowl") || titleLower.contains("melt") -> "Lunch"
+                            titleLower.contains("dip") || titleLower.contains("chip") || titleLower.contains("bite") || titleLower.contains("smoothie") || titleLower.contains("snack") || titleLower.contains("boat") -> "Snack & Light"
+                            else -> "Dinner"
+                        }
+                    }
+
                     recipes.add(
                         Recipe(
                             id = UUID.randomUUID().toString(),
@@ -290,7 +303,8 @@ class GeminiService {
                             matchedIngredients = matched,
                             missingIngredients = missing,
                             steps = steps,
-                            isSaved = false
+                            isSaved = false,
+                            mealType = inferredMealType
                         )
                     )
                 }
@@ -343,6 +357,7 @@ class GeminiService {
                 dietaryTags = listOf("Vegetarian", "Keto", "Gluten-Free", "Low Carb", "Under 30 Min", "High Protein"),
                 matchedIngredients = listOf("Organic Eggs (Carton)", "Aged Sharp Cheddar", "Fresh Baby Spinach", "Sweet Bell Peppers", "Salted Creamery Butter"),
                 missingIngredients = listOf("Black Pepper", "Smoked Paprika"),
+                mealType = "Breakfast",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -390,7 +405,7 @@ class GeminiService {
                 id = "std-2",
                 title = "Garlic Butter Pan-Seared Chicken & Peppers",
                 description = "Juicy golden chicken breast medallions sautéed with sweet bell peppers in a rich garlic herb butter sauce.",
-                cuisine = "American Bistro",
+                cuisine = "American",
                 difficulty = Difficulty.MEDIUM,
                 prepTimeMinutes = 12,
                 cookTimeMinutes = 18,
@@ -402,6 +417,7 @@ class GeminiService {
                 dietaryTags = listOf("Keto", "Gluten-Free", "Low Carb", "High Protein", "Under 30 Min"),
                 matchedIngredients = listOf("Chicken Breast", "Sweet Bell Peppers", "Garlic Cloves", "Salted Creamery Butter"),
                 missingIngredients = listOf("Italian Herb Seasoning", "Olive Oil", "Fresh Parsley"),
+                mealType = "Dinner",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -445,6 +461,7 @@ class GeminiService {
                 dietaryTags = listOf("Vegetarian", "Keto", "Gluten-Free", "Low Carb", "Under 30 Min", "High Protein"),
                 matchedIngredients = listOf("Organic Eggs (Carton)", "Ripe Roma Tomatoes", "Fresh Baby Spinach", "Aged Sharp Cheddar", "Salted Creamery Butter"),
                 missingIngredients = listOf("Dried Oregano"),
+                mealType = "Breakfast",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -471,6 +488,70 @@ class GeminiService {
                         chefTip = "Residual skillet heat will melt the cheese without overcooking the eggs."
                     )
                 )
+            ),
+            Recipe(
+                id = "std-4",
+                title = "Fiesta Chicken Fajita Salad Bowl",
+                description = "Crisp bell pepper strips and grilled chicken breast tossed with warm spinach and zesty garlic lime seasoning.",
+                cuisine = "Mexican",
+                difficulty = Difficulty.EASY,
+                prepTimeMinutes = 8,
+                cookTimeMinutes = 10,
+                calories = 380,
+                servings = 2,
+                proteinGrams = 38,
+                carbsGrams = 9,
+                fatGrams = 18,
+                dietaryTags = listOf("Keto", "Gluten-Free", "Low Carb", "High Protein", "Under 30 Min"),
+                matchedIngredients = listOf("Chicken Breast", "Sweet Bell Peppers", "Fresh Baby Spinach", "Garlic Cloves"),
+                missingIngredients = listOf("Lime Juice", "Cumin & Chili Powder", "Olive Oil"),
+                mealType = "Lunch",
+                steps = listOf(
+                    CookingStep(
+                        stepNumber = 1,
+                        title = "Sauté Fajita Chicken",
+                        instruction = "Sear sliced chicken strips with garlic and peppers in a hot skillet for 6 minutes until lightly charred.",
+                        timerSeconds = 360,
+                        ingredientsUsed = listOf("Chicken Breast", "Sweet Bell Peppers", "Garlic Cloves"),
+                        chefTip = "High heat gives authentic fajita smoke notes."
+                    ),
+                    CookingStep(
+                        stepNumber = 2,
+                        title = "Assemble Bowl",
+                        instruction = "Toss with baby spinach, tomatoes, and lime juice for a fresh lunch bowl.",
+                        timerSeconds = null,
+                        ingredientsUsed = listOf("Fresh Baby Spinach", "Ripe Roma Tomatoes"),
+                        chefTip = "Top with fresh cilantro if available."
+                    )
+                )
+            ),
+            Recipe(
+                id = "std-5",
+                title = "Warm Cheddar Spinach Snack Dip",
+                description = "Melted aged cheddar folded with wilted garlic spinach and roasted bell pepper bites for a quick savoury snack.",
+                cuisine = "American",
+                difficulty = Difficulty.EASY,
+                prepTimeMinutes = 5,
+                cookTimeMinutes = 6,
+                calories = 240,
+                servings = 2,
+                proteinGrams = 14,
+                carbsGrams = 4,
+                fatGrams = 18,
+                dietaryTags = listOf("Vegetarian", "Keto", "Gluten-Free", "Low Carb", "Under 30 Min"),
+                matchedIngredients = listOf("Aged Sharp Cheddar", "Fresh Baby Spinach", "Salted Creamery Butter", "Garlic Cloves"),
+                missingIngredients = listOf("Black Pepper"),
+                mealType = "Snack & Light",
+                steps = listOf(
+                    CookingStep(
+                        stepNumber = 1,
+                        title = "Melt & Fold",
+                        instruction = "Melt butter, sauté minced garlic and spinach for 2 minutes, then fold in grated cheddar until bubbly and creamy.",
+                        timerSeconds = 120,
+                        ingredientsUsed = listOf("Aged Sharp Cheddar", "Fresh Baby Spinach", "Garlic Cloves"),
+                        chefTip = "Serve warm with sliced bell peppers."
+                    )
+                )
             )
         )
 
@@ -495,7 +576,7 @@ class GeminiService {
                 id = "keto-1",
                 title = "Keto Creamy Bacon & Mushroom Chicken",
                 description = "Pan-seared tender chicken breast smothered in a decadent garlic mushroom heavy cream sauce topped with crispy bacon bits.",
-                cuisine = "French / Bistro",
+                cuisine = "French",
                 difficulty = Difficulty.MEDIUM,
                 prepTimeMinutes = 15,
                 cookTimeMinutes = 20,
@@ -507,6 +588,7 @@ class GeminiService {
                 dietaryTags = listOf("Keto", "Gluten-Free", "Low Carb", "High Protein", "Under 30 Min"),
                 matchedIngredients = listOf("Fresh Chicken Breasts", "Button Mushrooms", "Thick-Cut Smoked Bacon", "Heavy Whipping Cream"),
                 missingIngredients = listOf("Garlic Powder", "Fresh Thyme", "Olive Oil"),
+                mealType = "Dinner",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -546,7 +628,7 @@ class GeminiService {
                 id = "keto-2",
                 title = "Avocado & Crispy Bacon Poached Egg Bowl",
                 description = "Warm sliced zucchini ribbons sautéed in olive oil, crowned with fan-sliced avocado, crispy bacon, and soft poached eggs.",
-                cuisine = "Modern Californian",
+                cuisine = "American",
                 difficulty = Difficulty.EASY,
                 prepTimeMinutes = 8,
                 cookTimeMinutes = 12,
@@ -558,6 +640,7 @@ class GeminiService {
                 dietaryTags = listOf("Keto", "Gluten-Free", "Low Carb", "Dairy-Free", "High Protein", "Under 30 Min"),
                 matchedIngredients = listOf("Ripe Hass Avocados", "Free-Range Eggs", "Thick-Cut Smoked Bacon", "Fresh Green Zucchini", "Fresh Lemons"),
                 missingIngredients = listOf("Sea Salt Flakes", "Red Pepper Flakes"),
+                mealType = "Breakfast",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -584,6 +667,34 @@ class GeminiService {
                         chefTip = "Break the egg yolks over the avocado for a luscious natural dressing."
                     )
                 )
+            ),
+            Recipe(
+                id = "keto-3",
+                title = "Zucchini & Avocado Keto Snack Bites",
+                description = "Crispy seared zucchini medallions topped with smashed avocado, bacon crumble, and lemon zest.",
+                cuisine = "Mexican",
+                difficulty = Difficulty.EASY,
+                prepTimeMinutes = 5,
+                cookTimeMinutes = 5,
+                calories = 210,
+                servings = 2,
+                proteinGrams = 8,
+                carbsGrams = 4,
+                fatGrams = 18,
+                dietaryTags = listOf("Keto", "Gluten-Free", "Low Carb", "Dairy-Free", "Under 30 Min"),
+                matchedIngredients = listOf("Fresh Green Zucchini", "Ripe Hass Avocados", "Thick-Cut Smoked Bacon", "Fresh Lemons"),
+                missingIngredients = listOf("Sea Salt"),
+                mealType = "Snack & Light",
+                steps = listOf(
+                    CookingStep(
+                        stepNumber = 1,
+                        title = "Sear & Top",
+                        instruction = "Sear sliced zucchini rounds for 2 minutes per side in bacon drippings. Top with seasoned mashed avocado and bacon.",
+                        timerSeconds = 120,
+                        ingredientsUsed = listOf("Fresh Green Zucchini", "Ripe Hass Avocados"),
+                        chefTip = "Quick bite-sized finger food with zero carbs."
+                    )
+                )
             )
         )
 
@@ -608,7 +719,7 @@ class GeminiService {
                 id = "vgn-1",
                 title = "Crispy Golden Tofu & Broccoli Ginger Stir-Fry",
                 description = "Seared firm tofu cubes tossed with broccoli florets, carrots, and mushrooms in a fragrant garlic ginger glaze.",
-                cuisine = "Pan-Asian",
+                cuisine = "Asian",
                 difficulty = Difficulty.MEDIUM,
                 prepTimeMinutes = 15,
                 cookTimeMinutes = 15,
@@ -620,6 +731,7 @@ class GeminiService {
                 dietaryTags = listOf("Vegan", "Vegetarian", "Dairy-Free", "High Protein", "Under 30 Min"),
                 matchedIngredients = listOf("Organic Firm Tofu", "Fresh Broccoli Florets", "Sweet Orange Carrots", "Crimini Mushrooms", "Garlic Cloves & Ginger"),
                 missingIngredients = listOf("Soy Sauce or Tamari", "Sesame Oil", "Cornstarch"),
+                mealType = "Dinner",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -659,7 +771,7 @@ class GeminiService {
                 id = "vgn-2",
                 title = "Creamy Garlic & Lemon Tuscan Kale Soup",
                 description = "Silky and comforting soup blended with almond milk, sautéed mushrooms, tender carrots, and wilted Tuscan kale.",
-                cuisine = "Italian Rustic",
+                cuisine = "Italian",
                 difficulty = Difficulty.EASY,
                 prepTimeMinutes = 10,
                 cookTimeMinutes = 18,
@@ -671,6 +783,7 @@ class GeminiService {
                 dietaryTags = listOf("Vegan", "Vegetarian", "Dairy-Free", "Gluten-Free", "Under 30 Min"),
                 matchedIngredients = listOf("Tuscan Dinosaur Kale", "Crimini Mushrooms", "Sweet Orange Carrots", "Unsweetened Almond Milk", "Garlic Cloves & Ginger", "Fresh Meyer Lemons"),
                 missingIngredients = listOf("Vegetable Broth", "Olive Oil", "Cracked Pepper"),
+                mealType = "Lunch",
                 steps = listOf(
                     CookingStep(
                         stepNumber = 1,
@@ -695,6 +808,34 @@ class GeminiService {
                         timerSeconds = 180,
                         ingredientsUsed = listOf("Tuscan Dinosaur Kale", "Fresh Meyer Lemons"),
                         chefTip = "Lemon juice brightens the earthy kale flavor beautifully."
+                    )
+                )
+            ),
+            Recipe(
+                id = "vgn-3",
+                title = "Savory Tofu & Mushroom Breakfast Scramble",
+                description = "Crumbled firm tofu pan-seared with turmeric, garlic, sliced mushrooms, and shredded kale.",
+                cuisine = "American",
+                difficulty = Difficulty.EASY,
+                prepTimeMinutes = 7,
+                cookTimeMinutes = 8,
+                calories = 290,
+                servings = 2,
+                proteinGrams = 22,
+                carbsGrams = 8,
+                fatGrams = 16,
+                dietaryTags = listOf("Vegan", "Vegetarian", "Dairy-Free", "Gluten-Free", "High Protein", "Under 30 Min"),
+                matchedIngredients = listOf("Organic Firm Tofu", "Crimini Mushrooms", "Tuscan Dinosaur Kale", "Garlic Cloves & Ginger"),
+                missingIngredients = listOf("Turmeric", "Nutritional Yeast", "Olive Oil"),
+                mealType = "Breakfast",
+                steps = listOf(
+                    CookingStep(
+                        stepNumber = 1,
+                        title = "Scramble & Sauté",
+                        instruction = "Crumble tofu by hand into a hot skillet with olive oil and turmeric. Sauté with mushrooms and kale for 6 minutes.",
+                        timerSeconds = 360,
+                        ingredientsUsed = listOf("Organic Firm Tofu", "Crimini Mushrooms", "Tuscan Dinosaur Kale"),
+                        chefTip = "Turmeric provides a stunning golden color and anti-inflammatory boost."
                     )
                 )
             )

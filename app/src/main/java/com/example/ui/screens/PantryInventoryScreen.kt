@@ -624,11 +624,19 @@ private fun PantryItemDialog(
         Pair("1 Year", 365)
     )
 
+    val parsedPantryItems = remember(name) {
+        if (name.isBlank()) emptyList()
+        else name.split(",", "\n", ";")
+            .map { it.trim().trim('•', '-', '*', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.').trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (existingItem != null) "Edit Pantry Item" else "Add Pantry Item",
+                text = if (existingItem != null) "Edit Pantry Item" else "Add Pantry Items",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = BentoTextPrimary
@@ -639,20 +647,56 @@ private fun PantryItemDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Item Name (e.g. Olive Oil, Garlic Powder)") },
-                    singleLine = true,
+                    label = { Text("Item Name(s) (e.g. Olive Oil, Garlic Powder, Rice)") },
+                    singleLine = false,
+                    maxLines = 3,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("pantry_dialog_name_input")
                 )
+
+                if (parsedPantryItems.size > 1) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Adding ${parsedPantryItems.size} items:",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = BentoGreenPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        parsedPantryItems.forEach { item ->
+                            Surface(
+                                shape = RoundedCornerShape(100.dp),
+                                color = BentoTileSage,
+                                border = BorderStroke(1.dp, BentoGreenPrimary.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = item,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BentoGreenPrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
-                    label = { Text("Quantity / Pack Size (e.g. 500ml, 2 cans)") },
+                    label = { Text("Quantity / Pack Size (e.g. 500ml, 2 cans, 1 pack)") },
                     singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
 

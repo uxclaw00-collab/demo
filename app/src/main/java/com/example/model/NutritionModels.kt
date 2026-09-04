@@ -79,3 +79,80 @@ data class NutritionGoals(
     val targetCarbsGrams: Int = 200,
     val targetFatGrams: Int = 65
 )
+
+enum class AllergenType(
+    val id: String,
+    val displayName: String,
+    val iconEmoji: String,
+    val description: String
+) {
+    DAIRY("dairy", "Dairy / Lactose", "🥛", "Contains milk, cheese, butter, yogurt, cream, or dairy derivatives"),
+    EGGS("eggs", "Eggs", "🥚", "Contains whole eggs, egg whites, yolks, or mayonnaise"),
+    GLUTEN("gluten", "Gluten / Wheat", "🌾", "Contains wheat, all-purpose flour, pasta, bread, barley, or soy sauce"),
+    PEANUTS("peanuts", "Peanuts", "🥜", "Contains peanuts, peanut butter, or peanut oil"),
+    TREE_NUTS("tree_nuts", "Tree Nuts", "🌰", "Contains almonds, walnuts, cashews, pecans, hazelnuts, or pine nuts"),
+    SOY("soy", "Soy", "🌱", "Contains soy sauce, tofu, edamame, tempeh, miso, or soybean oil"),
+    FISH("fish", "Fish", "🐟", "Contains finfish like salmon, tuna, cod, tilapia, or anchovies/fish sauce"),
+    SHELLFISH("shellfish", "Shellfish & Crustaceans", "🦐", "Contains shrimp, prawns, crab, lobster, clams, or mussels"),
+    SESAME("sesame", "Sesame", "🥯", "Contains sesame seeds, tahini, or sesame oil"),
+    SULFITES("sulfites", "Sulfites / Wine", "🍷", "Contains wine, wine vinegars, or preserved dried fruits"),
+    NIGHTSHADES("nightshades", "Nightshades", "🍅", "Contains tomatoes, bell peppers, chili peppers, or eggplants")
+}
+
+data class DetectedAllergen(
+    val type: AllergenType,
+    val triggerIngredients: List<String>,
+    val riskLevel: String = "Contains Allergen"
+)
+
+data class IngredientNutritionDetail(
+    val ingredientName: String,
+    val estimatedCalories: Int,
+    val proteinGrams: Double,
+    val carbsGrams: Double,
+    val fatGrams: Double,
+    val fiberGrams: Double = 0.0,
+    val sugarGrams: Double = 0.0,
+    val sodiumMg: Int = 0,
+    val portionDescription: String = "1 standard serving",
+    val allergensContained: List<AllergenType> = emptyList(),
+    val isMainProtein: Boolean = false,
+    val isHealthyFat: Boolean = false
+)
+
+data class MicronutrientHighlight(
+    val name: String,
+    val amount: String,
+    val dailyValuePercent: Int,
+    val benefit: String,
+    val iconEmoji: String
+)
+
+data class NutritionHealthBadge(
+    val label: String,
+    val emoji: String,
+    val description: String
+)
+
+data class ParsedRecipeNutrition(
+    val recipeId: String,
+    val recipeTitle: String,
+    val servings: Int,
+    val caloriesPerServing: Int,
+    val totalCalories: Int,
+    val proteinGramsPerServing: Double,
+    val carbsGramsPerServing: Double,
+    val fatGramsPerServing: Double,
+    val fiberGramsPerServing: Double,
+    val sugarGramsPerServing: Double,
+    val sodiumMgPerServing: Int,
+    val netCarbsGramsPerServing: Double,
+    val proteinRatioPercent: Int,
+    val carbsRatioPercent: Int,
+    val fatRatioPercent: Int,
+    val detectedAllergens: List<DetectedAllergen>,
+    val allergenFreeTags: List<String>,
+    val ingredientDetails: List<IngredientNutritionDetail>,
+    val healthBadges: List<NutritionHealthBadge>,
+    val micronutrientHighlights: List<MicronutrientHighlight>
+)

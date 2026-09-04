@@ -8,14 +8,17 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.repository.CulinaryRepository
 import com.example.model.CookingStep
+import com.example.model.CuisineFilter
 import com.example.model.DayInfo
 import com.example.model.DetectedIngredient
 import com.example.model.DietaryFilter
 import com.example.model.GroceryBudgetSummary
 import com.example.model.MealLog
+import com.example.model.MealType
 import com.example.model.NutritionGoals
 import com.example.model.PantryItem
 import com.example.model.PlannedMeal
+import com.example.model.PrepTimeFilter
 import com.example.model.Recipe
 import com.example.model.ShoppingItem
 import com.example.util.GroceryPriceEstimator
@@ -67,8 +70,116 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
     private val _dietaryFilters = MutableStateFlow<Set<DietaryFilter>>(emptySet())
     val dietaryFilters: StateFlow<Set<DietaryFilter>> = _dietaryFilters.asStateFlow()
 
+    private val _selectedMealType = MutableStateFlow(MealType.ALL)
+    val selectedMealType: StateFlow<MealType> = _selectedMealType.asStateFlow()
+
+    private val _selectedPrepTime = MutableStateFlow(PrepTimeFilter.ANY)
+    val selectedPrepTime: StateFlow<PrepTimeFilter> = _selectedPrepTime.asStateFlow()
+
+    private val _selectedCuisine = MutableStateFlow(CuisineFilter.ALL)
+    val selectedCuisine: StateFlow<CuisineFilter> = _selectedCuisine.asStateFlow()
+
     private val _suggestedRecipes = MutableStateFlow<List<Recipe>>(emptyList())
     val suggestedRecipes: StateFlow<List<Recipe>> = _suggestedRecipes.asStateFlow()
+
+    val displayedSuggestedRecipes: StateFlow<List<Recipe>> = combine(
+        _suggestedRecipes,
+        _selectedMealType,
+        _selectedPrepTime,
+        _selectedCuisine
+    ) { recipes, mealType, prepTime, cuisine ->
+        recipes.filter { recipe ->
+            val matchesMeal = when (mealType) {
+                MealType.ALL -> true
+                MealType.BREAKFAST -> recipe.mealType.equals("Breakfast", ignoreCase = true) ||
+                    recipe.title.contains("Scramble", ignoreCase = true) ||
+                    recipe.title.contains("Frittata", ignoreCase = true) ||
+                    recipe.title.contains("Egg", ignoreCase = true) ||
+                    recipe.title.contains("Omelette", ignoreCase = true) ||
+                    recipe.title.contains("Pancake", ignoreCase = true) ||
+                    recipe.title.contains("Waffle", ignoreCase = true) ||
+                    recipe.title.contains("Oat", ignoreCase = true)
+                MealType.LUNCH -> recipe.mealType.equals("Lunch", ignoreCase = true) ||
+                    recipe.title.contains("Salad", ignoreCase = true) ||
+                    recipe.title.contains("Wrap", ignoreCase = true) ||
+                    recipe.title.contains("Sandwich", ignoreCase = true) ||
+                    recipe.title.contains("Bowl", ignoreCase = true) ||
+                    recipe.title.contains("Soup", ignoreCase = true) ||
+                    recipe.title.contains("Melt", ignoreCase = true)
+                MealType.DINNER -> recipe.mealType.equals("Dinner", ignoreCase = true) ||
+                    recipe.title.contains("Chicken", ignoreCase = true) ||
+                    recipe.title.contains("Steak", ignoreCase = true) ||
+                    recipe.title.contains("Salmon", ignoreCase = true) ||
+                    recipe.title.contains("Pasta", ignoreCase = true) ||
+                    recipe.title.contains("Stir-Fry", ignoreCase = true) ||
+                    recipe.title.contains("Curry", ignoreCase = true) ||
+                    recipe.title.contains("Skillet", ignoreCase = true)
+                MealType.SNACK -> recipe.mealType.equals("Snack", ignoreCase = true) ||
+                    recipe.mealType.equals("Snack & Light", ignoreCase = true) ||
+                    recipe.title.contains("Dip", ignoreCase = true) ||
+                    recipe.title.contains("Bite", ignoreCase = true) ||
+                    recipe.title.contains("Chip", ignoreCase = true) ||
+                    recipe.title.contains("Smoothie", ignoreCase = true) ||
+                    recipe.title.contains("Boat", ignoreCase = true)
+            }
+
+            val matchesPrepTime = when (prepTime) {
+                PrepTimeFilter.ANY -> true
+                PrepTimeFilter.UNDER_15 -> recipe.prepTimeMinutes <= 15
+                PrepTimeFilter.UNDER_30 -> recipe.prepTimeMinutes <= 30
+                PrepTimeFilter.UNDER_45 -> recipe.prepTimeMinutes <= 45
+                PrepTimeFilter.UNDER_60 -> recipe.prepTimeMinutes <= 60
+            }
+
+            val matchesCuisine = when (cuisine) {
+                CuisineFilter.ALL -> true
+                CuisineFilter.ITALIAN -> recipe.cuisine.contains("Italian", ignoreCase = true) ||
+                    recipe.cuisine.contains("Tuscan", ignoreCase = true) ||
+                    recipe.title.contains("Pasta", ignoreCase = true)
+                CuisineFilter.MEXICAN -> recipe.cuisine.contains("Mexican", ignoreCase = true) ||
+                    recipe.title.contains("Fajita", ignoreCase = true) ||
+                    recipe.title.contains("Taco", ignoreCase = true)
+                CuisineFilter.ASIAN -> recipe.cuisine.contains("Asian", ignoreCase = true) ||
+                    recipe.cuisine.contains("Japanese", ignoreCase = true) ||
+                    recipe.cuisine.contains("Chinese", ignoreCase = true) ||
+                    recipe.cuisine.contains("Thai", ignoreCase = true) ||
+                    recipe.cuisine.contains("Wok", ignoreCase = true) ||
+                    recipe.title.contains("Stir-Fry", ignoreCase = true)
+                CuisineFilter.MEDITERRANEAN -> recipe.cuisine.contains("Mediter", ignoreCase = true) ||
+                    recipe.cuisine.contains("Greek", ignoreCase = true)
+                CuisineFilter.AMERICAN -> recipe.cuisine.contains("American", ignoreCase = true) ||
+                    recipe.cuisine.contains("Bistro", ignoreCase = true)
+                CuisineFilter.FRENCH -> recipe.cuisine.contains("French", ignoreCase = true)
+                CuisineFilter.INDIAN -> recipe.cuisine.contains("Indian", ignoreCase = true) ||
+                    recipe.cuisine.contains("Curry", ignoreCase = true)
+                CuisineFilter.MIDDLE_EASTERN -> recipe.cuisine.contains("Middle Eastern", ignoreCase = true) ||
+                    recipe.cuisine.contains("Lebanese", ignoreCase = true)
+            }
+
+            matchesMeal && matchesPrepTime && matchesCuisine
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val activeFilterCount: StateFlow<Int> = combine(
+        _dietaryFilters,
+        _selectedMealType,
+        _selectedPrepTime,
+        _selectedCuisine
+    ) { dietary, meal, prep, cuisine ->
+        var count = dietary.size
+        if (meal != MealType.ALL) count++
+        if (prep != PrepTimeFilter.ANY) count++
+        if (cuisine != CuisineFilter.ALL) count++
+        count
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0
+    )
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -192,6 +303,17 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             repository.seedInitialPantryIfEmpty()
         }
+        
+        // Keep suggested recipes' isSaved state in sync with savedRecipes flow
+        viewModelScope.launch {
+            savedRecipes.collect { savedList ->
+                val savedIds = savedList.map { it.id }.toSet()
+                _suggestedRecipes.value = _suggestedRecipes.value.map { recipe ->
+                    recipe.copy(isSaved = savedIds.contains(recipe.id))
+                }
+            }
+        }
+
         loadPreset("fresh")
     }
 
@@ -214,10 +336,32 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
             current.add(filter)
         }
         _dietaryFilters.value = current
+        regenerateRecipesWithActiveFilters()
     }
 
     fun clearDietaryFilters() {
         _dietaryFilters.value = emptySet()
+        regenerateRecipesWithActiveFilters()
+    }
+
+    fun setSelectedMealType(mealType: MealType) {
+        _selectedMealType.value = mealType
+    }
+
+    fun setSelectedPrepTime(prepTime: PrepTimeFilter) {
+        _selectedPrepTime.value = prepTime
+    }
+
+    fun setSelectedCuisine(cuisine: CuisineFilter) {
+        _selectedCuisine.value = cuisine
+    }
+
+    fun resetAllDiscoveryFilters() {
+        _selectedMealType.value = MealType.ALL
+        _selectedPrepTime.value = PrepTimeFilter.ANY
+        _selectedCuisine.value = CuisineFilter.ALL
+        _dietaryFilters.value = emptySet()
+        regenerateRecipesWithActiveFilters()
     }
 
     fun loadPreset(presetName: String) {
@@ -254,8 +398,9 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
             _isLoading.value = false
             if (result.isSuccess) {
                 val (detected, recipes) = result.getOrThrow()
+                val savedIds = savedRecipes.value.map { it.id }.toSet()
                 _detectedIngredients.value = detected
-                _suggestedRecipes.value = recipes
+                _suggestedRecipes.value = recipes.map { it.copy(isSaved = savedIds.contains(it.id)) }
                 _snackbarMessage.value = "Detected ${detected.size} items! Generated ${recipes.size} personalized recipes."
             } else {
                 _snackbarMessage.value = "Could not connect to AI. Using smart pantry recommendations."
@@ -268,18 +413,114 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
             if (it.name.equals(name, ignoreCase = true)) it.copy(isSelected = !it.isSelected) else it
         }
         _detectedIngredients.value = current
+        recalculateRecipeMatches(current)
+    }
+
+    private fun recalculateRecipeMatches(currentIngredients: List<DetectedIngredient>) {
+        val selectedNames = currentIngredients.filter { it.isSelected }.map { it.name.lowercase() }
+        _suggestedRecipes.value = _suggestedRecipes.value.map { recipe ->
+            val allRequired = (recipe.matchedIngredients + recipe.missingIngredients).distinct()
+            val matched = allRequired.filter { req ->
+                selectedNames.any { it.contains(req.lowercase()) || req.lowercase().contains(it) }
+            }
+            val missing = allRequired.filterNot { req ->
+                selectedNames.any { it.contains(req.lowercase()) || req.lowercase().contains(it) }
+            }
+            recipe.copy(
+                matchedIngredients = if (matched.isNotEmpty()) matched else recipe.matchedIngredients,
+                missingIngredients = missing
+            )
+        }
     }
 
     fun addCustomIngredient(name: String, category: String = "Produce") {
         if (name.isBlank()) return
+        if (name.contains(",") || name.contains(";") || name.contains("\n")) {
+            addMultipleCustomIngredients(name, category)
+            return
+        }
+        val trimmedName = name.trim()
         val current = _detectedIngredients.value.toMutableList()
-        current.add(0, DetectedIngredient(name.trim(), category, "Added", true))
+        val existingIndex = current.indexOfFirst { it.name.equals(trimmedName, ignoreCase = true) }
+        if (existingIndex >= 0) {
+            current[existingIndex] = current[existingIndex].copy(isSelected = true)
+        } else {
+            val resolvedCategory = if (category == "Produce" || category == "Pantry") autoDetectCategory(trimmedName) else category
+            current.add(0, DetectedIngredient(trimmedName, resolvedCategory, "Added", true))
+        }
         _detectedIngredients.value = current
-        _snackbarMessage.value = "Added '$name' to fridge inventory"
+        recalculateRecipeMatches(current)
+        _snackbarMessage.value = "Added '$trimmedName' to fridge inventory"
+    }
+
+    fun addMultipleCustomIngredients(rawInput: String, defaultCategory: String = "Produce") {
+        if (rawInput.isBlank()) return
+        val items = rawInput.split(",", "\n", ";")
+            .map { it.trim().trim('•', '-', '*', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.').trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        if (items.isEmpty()) return
+
+        val current = _detectedIngredients.value.toMutableList()
+        var addedCount = 0
+        val addedNames = mutableListOf<String>()
+
+        items.forEach { rawItem ->
+            val itemName = rawItem.trim()
+            if (itemName.isNotEmpty()) {
+                val existingIndex = current.indexOfFirst { it.name.equals(itemName, ignoreCase = true) }
+                if (existingIndex >= 0) {
+                    current[existingIndex] = current[existingIndex].copy(isSelected = true)
+                } else {
+                    val resolvedCategory = if (defaultCategory == "Produce" || defaultCategory == "Pantry") {
+                        autoDetectCategory(itemName)
+                    } else {
+                        defaultCategory
+                    }
+                    current.add(0, DetectedIngredient(itemName, resolvedCategory, "Added", true))
+                    addedCount++
+                    addedNames.add(itemName)
+                }
+            }
+        }
+
+        _detectedIngredients.value = current
+        recalculateRecipeMatches(current)
+
+        _snackbarMessage.value = when {
+            addedCount == 1 -> "Added '${addedNames.first()}' to fridge inventory"
+            addedCount > 1 -> "Added $addedCount ingredients to fridge inventory"
+            else -> "Selected existing fridge ingredients"
+        }
+    }
+
+    private fun autoDetectCategory(ingredientName: String): String {
+        val lower = ingredientName.lowercase()
+        return when {
+            lower.contains("egg") || lower.contains("milk") || lower.contains("cheese") ||
+                lower.contains("yogurt") || lower.contains("butter") || lower.contains("cream") ||
+                lower.contains("cheddar") || lower.contains("mozzarella") || lower.contains("parmesan") ||
+                lower.contains("feta") -> "Dairy & Eggs"
+            lower.contains("chicken") || lower.contains("beef") || lower.contains("steak") ||
+                lower.contains("pork") || lower.contains("salmon") || lower.contains("tuna") ||
+                lower.contains("shrimp") || lower.contains("turkey") || lower.contains("bacon") ||
+                lower.contains("sausage") || lower.contains("fish") || lower.contains("ham") -> "Meat & Seafood"
+            lower.contains("oil") || lower.contains("rice") || lower.contains("pasta") ||
+                lower.contains("flour") || lower.contains("sugar") || lower.contains("salt") ||
+                lower.contains("pepper") || lower.contains("spice") || lower.contains("sauce") ||
+                lower.contains("vinegar") || lower.contains("noodle") || lower.contains("bean") ||
+                lower.contains("can") || lower.contains("broth") || lower.contains("stock") -> "Pantry"
+            lower.contains("mayo") || lower.contains("mustard") || lower.contains("ketchup") ||
+                lower.contains("salsa") || lower.contains("dressing") || lower.contains("jam") -> "Condiments"
+            else -> "Produce"
+        }
     }
 
     fun removeIngredient(name: String) {
-        _detectedIngredients.value = _detectedIngredients.value.filterNot { it.name.equals(name, ignoreCase = true) }
+        val updated = _detectedIngredients.value.filterNot { it.name.equals(name, ignoreCase = true) }
+        _detectedIngredients.value = updated
+        recalculateRecipeMatches(updated)
     }
 
     // --- Step-by-Step Cooking Mode Actions ---
@@ -419,9 +660,22 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
 
     fun addPantryItem(name: String, quantity: String, category: String, expirationDateMillis: Long?) {
         if (name.isBlank()) return
+        val items = name.split(",", "\n", ";")
+            .map { it.trim().trim('•', '-', '*', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.').trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+
         viewModelScope.launch {
-            repository.addPantryItem(name, quantity, category, expirationDateMillis)
-            _snackbarMessage.value = "Added '$name' to your Pantry Inventory"
+            if (items.size > 1) {
+                items.forEach { itemName ->
+                    repository.addPantryItem(itemName, quantity, category, expirationDateMillis)
+                }
+                _snackbarMessage.value = "Added ${items.size} items to your Pantry Inventory"
+            } else {
+                val singleItem = items.firstOrNull() ?: name.trim()
+                repository.addPantryItem(singleItem, quantity, category, expirationDateMillis)
+                _snackbarMessage.value = "Added '$singleItem' to your Pantry Inventory"
+            }
         }
     }
 
@@ -755,6 +1009,23 @@ class CulinaryViewModel(application: Application) : AndroidViewModel(application
             )
 
             startCooking(recipeToCook)
+        }
+    }
+
+    fun addAggregatedIngredientsToShoppingList(items: List<com.example.util.AggregatedIngredientItem>) {
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            var addedCount = 0
+            items.forEach { item ->
+                repository.addShoppingItem(
+                    name = item.name,
+                    amount = if (item.occurrenceCount > 1) "Needed in ${item.occurrenceCount} meals" else "1 recipe portion",
+                    category = item.category,
+                    recipeSource = "Meal Plan (${item.recipeSources.take(2).joinToString(", ")})"
+                )
+                addedCount++
+            }
+            _snackbarMessage.value = "🛒 Added $addedCount aggregated ingredients to Shopping Bento!"
         }
     }
 

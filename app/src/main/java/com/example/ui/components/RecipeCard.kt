@@ -79,6 +79,7 @@ fun RecipeCard(
     onAddMissingIngredients: (Recipe) -> Unit,
     onToggleSave: (Recipe) -> Unit,
     onAddSubstituteToShoppingList: ((substituteName: String, originalName: String) -> Unit)? = null,
+    onScheduleMeal: ((Recipe) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Cross-reference missing ingredients with Pantry inventory
@@ -129,6 +130,25 @@ fun RecipeCard(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
+                    }
+
+                    // Meal Type Pill
+                    if (recipe.mealType.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(100.dp),
+                            color = BentoTileApricot
+                        ) {
+                            Text(
+                                text = recipe.mealType.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 10.sp,
+                                    letterSpacing = 0.8.sp
+                                ),
+                                color = WarmSpice,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                            )
+                        }
                     }
 
                     // Difficulty Badge
@@ -240,8 +260,8 @@ fun RecipeCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Bento Macronutrient Mini Breakdown Bar
-            MacroBar(protein = recipe.proteinGrams, carbs = recipe.carbsGrams, fat = recipe.fatGrams)
+            // Bento Nutrition & Allergen Parser View
+            RecipeNutritionSection(recipe = recipe)
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -468,30 +488,64 @@ fun RecipeCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Prominent Bento "Start Cooking" Button
-            Button(
-                onClick = { onStartCooking(recipe) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .testTag("start_cooking_button_${recipe.id}"),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BentoGreenPrimary,
-                    contentColor = Color.White
-                )
+            // Action Buttons: Start Cooking + Schedule to Meal Plan
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Start Step-by-Step Cooking (${recipe.steps.size} Steps)",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                // Prominent Bento "Start Cooking" Button
+                Button(
+                    onClick = { onStartCooking(recipe) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("start_cooking_button_${recipe.id}"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BentoGreenPrimary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Cook (${recipe.steps.size} Steps)",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Schedule to Meal Plan Button
+                if (onScheduleMeal != null) {
+                    Button(
+                        onClick = { onScheduleMeal(recipe) },
+                        modifier = Modifier
+                            .height(48.dp)
+                            .testTag("schedule_recipe_card_button_${recipe.id}"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BentoTileSage,
+                            contentColor = BentoGreenPrimary
+                        ),
+                        border = BorderStroke(1.dp, BentoGreenPrimary.copy(alpha = 0.4f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Schedule Recipe",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Schedule",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -59,6 +60,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +75,8 @@ import androidx.compose.ui.unit.sp
 import com.example.model.CookingStep
 import com.example.model.Recipe
 import com.example.ui.CulinaryViewModel
+import com.example.ui.components.NutritionFactsModalDialog
+import com.example.util.NutritionParser
 import com.example.ui.theme.BentoBackground
 import com.example.ui.theme.BentoBorder
 import com.example.ui.theme.BentoCardBg
@@ -103,6 +109,7 @@ fun CookingModeScreen(
     val isSpeaking by viewModel.ttsManager.isSpeaking.collectAsState()
     val speechRate by viewModel.ttsManager.speechRate.collectAsState()
     val isCompleted by viewModel.isRecipeCompleted.collectAsState()
+    var showNutritionDialog by remember { mutableStateOf(false) }
 
     val currentRecipe = recipe
     if (currentRecipe == null) {
@@ -177,17 +184,42 @@ fun CookingModeScreen(
                         }
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(100.dp),
-                        color = BentoTileSage
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "${currentStepIndex + 1}/$totalSteps",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = BentoGreenPrimary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = BentoTileSage,
+                            border = BorderStroke(1.dp, BentoGreenPrimary.copy(alpha = 0.4f)),
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .clickable { showNutritionDialog = true }
+                                .testTag("cooking_mode_nutrition_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Assessment,
+                                    contentDescription = "View Recipe Nutrition & Allergens",
+                                    tint = BentoGreenPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(100.dp),
+                            color = BentoTileSage
+                        ) {
+                            Text(
+                                text = "${currentStepIndex + 1}/$totalSteps",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = BentoGreenPrimary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -439,6 +471,14 @@ fun CookingModeScreen(
             },
             shape = RoundedCornerShape(24.dp),
             containerColor = Color.White
+        )
+    }
+
+    if (showNutritionDialog) {
+        NutritionFactsModalDialog(
+            recipe = currentRecipe,
+            nutrition = NutritionParser.parseRecipe(currentRecipe),
+            onDismiss = { showNutritionDialog = false }
         )
     }
 }

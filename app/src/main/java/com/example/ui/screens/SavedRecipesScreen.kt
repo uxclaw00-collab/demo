@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.AppScreen
 import com.example.ui.CulinaryViewModel
+import com.example.model.Recipe
+import com.example.ui.components.ScheduleMealDialog
 import com.example.ui.components.RecipeCard
 import com.example.ui.theme.BentoBackground
 import com.example.ui.theme.BentoBorder

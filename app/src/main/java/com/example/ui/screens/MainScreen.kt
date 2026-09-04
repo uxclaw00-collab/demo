@@ -83,6 +83,10 @@ fun MainScreen(
     val currentScreen by viewModel.currentScreen.collectAsState()
     val isFilterSheetOpen by viewModel.isFilterSheetOpen.collectAsState()
     val dietaryFilters by viewModel.dietaryFilters.collectAsState()
+    val selectedMealType by viewModel.selectedMealType.collectAsState()
+    val selectedPrepTime by viewModel.selectedPrepTime.collectAsState()
+    val selectedCuisine by viewModel.selectedCuisine.collectAsState()
+    val activeFilterCount by viewModel.activeFilterCount.collectAsState()
     val shoppingItems by viewModel.shoppingItems.collectAsState()
     val savedRecipes by viewModel.savedRecipes.collectAsState()
     val pantryItems by viewModel.pantryItems.collectAsState()
@@ -166,12 +170,12 @@ fun MainScreen(
                                 Box(contentAlignment = Alignment.Center) {
                                     BadgedBox(
                                         badge = {
-                                            if (dietaryFilters.isNotEmpty()) {
+                                            if (activeFilterCount > 0) {
                                                 Badge(
                                                     containerColor = BentoGreenPrimary,
                                                     contentColor = Color.White
                                                 ) {
-                                                    Text("${dietaryFilters.size}")
+                                                    Text("$activeFilterCount")
                                                 }
                                             }
                                         }
@@ -496,8 +500,14 @@ fun MainScreen(
     DietaryFilterSheet(
         isOpen = isFilterSheetOpen,
         selectedFilters = dietaryFilters,
+        selectedMealType = selectedMealType,
+        selectedPrepTime = selectedPrepTime,
+        selectedCuisine = selectedCuisine,
         onToggleFilter = { viewModel.toggleDietaryFilter(it) },
-        onClearFilters = { viewModel.clearDietaryFilters() },
+        onSelectMealType = { viewModel.setSelectedMealType(it) },
+        onSelectPrepTime = { viewModel.setSelectedPrepTime(it) },
+        onSelectCuisine = { viewModel.setSelectedCuisine(it) },
+        onClearFilters = { viewModel.resetAllDiscoveryFilters() },
         onApply = { viewModel.regenerateRecipesWithActiveFilters() },
         onDismiss = { viewModel.setFilterSheetOpen(false) }
     )
